@@ -104,13 +104,34 @@ function Restore-ProcessEnvironment {
 }
 
 function Assert-NoLocalDjangoServer {
+    param(
+        [Parameter(Mandatory)][string]$ProjectRoot,
+        [Parameter(Mandatory)][string]$PythonExecutable
+    )
+
+    $escapedProjectRoot = [Regex]::Escape($ProjectRoot)
+    $normalizedPythonExecutable = [IO.Path]::GetFullPath($PythonExecutable)
     $servers = @()
     try {
         $servers = @(
             Get-CimInstance Win32_Process -ErrorAction Stop |
                 Where-Object {
-                    $_.CommandLine -match "waitress|manage\.py.+runserver" -and
-                    $_.CommandLine -match "eletrico\.wsgi|manage\.py.+runserver"
+                    -not [string]::IsNullOrWhiteSpace($_.CommandLine) -and
+                    $_.CommandLine -match (
+                        "waitress.+eletrico\.wsgi|manage\.py.+runserver"
+                    ) -and
+                    (
+                        $_.CommandLine -match $escapedProjectRoot -or
+                        (
+                            -not [string]::IsNullOrWhiteSpace(
+                                $_.ExecutablePath
+                            ) -and
+                            [IO.Path]::GetFullPath($_.ExecutablePath).Equals(
+                                $normalizedPythonExecutable,
+                                [StringComparison]::OrdinalIgnoreCase
+                            )
+                        )
+                    )
                 }
         )
     }
@@ -144,11 +165,13 @@ $sqlitePath = [IO.Path]::GetFullPath(
 if (-not (Test-Path -LiteralPath $sqlitePath -PathType Leaf)) {
     throw "Banco SQLite nao encontrado em database\db.sqlite3."
 }
-Assert-NoLocalDjangoServer
 
 $pythonExecutable = Resolve-PythonExecutable `
     -ProjectRoot $projectRoot `
     -RequestedPath $PythonPath
+Assert-NoLocalDjangoServer `
+    -ProjectRoot $projectRoot `
+    -PythonExecutable $pythonExecutable
 
 if ([string]::IsNullOrWhiteSpace($BackupDirectory)) {
     $BackupDirectory = Join-Path (
