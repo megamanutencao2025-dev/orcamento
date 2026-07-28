@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if novo %}Novo orçamento{% else %}Editar {{ orcamento.numero }}{% endif %} · {{ app_name }}{% endblock %}
+{% block page_name %}{% if novo %}Novo orçamento{% else %}Editar orçamento{% endif %}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{% static 'css/quote-builder.css' %}">{% endblock %}
+{% block content %}
+<form method="post" id="quote-form" class="quote-builder" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="itens_json" id="itens-json">
+    <p id="builder-status" class="visually-hidden" role="status" aria-live="polite"></p>
+
+    <header class="builder-heading">
+        <div>
+            <a class="back-link" href="{% url 'orcamentos:lista' %}">← Orçamentos</a>
+            <h1>{% if novo %}Novo orçamento{% else %}Editar orçamento{% endif %}</h1>
+            <p>{% if novo %}Monte os custos internos, a proposta e a lista de compra no mesmo lugar.{% else %}Atualize os dados e os itens do orçamento {{ orcamento.numero }}.{% endif %}</p>
+        </div>
+        <div class="builder-heading__actions">
+            {% if not novo %}<a class="button button--ghost" href="{% url 'orcamentos:proposta_pdf' orcamento.pk %}" target="_blank" rel="noopener">Imprimir / PDF</a>{% endif %}
+            <button class="button button--primary builder-heading__save" type="submit">▣ {% if novo %}Salvar orçamento{% else %}Salvar alterações{% endif %}</button>
+        </div>
+    </header>
+
+    {% if form.non_field_errors %}
+        <div class="builder-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <details class="builder-section" data-section-key="quote-data" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">▤</span><h2>Dados do orçamento</h2></div>
+        </summary>
+        <div class="builder-fields builder-fields--quote">
+            <div class="field"><label for="quote-number">Número</label><input id="quote-number" value="{% if novo %}Gerado ao salvar{% else %}{{ orcamento.numero }}{% endif %}" readonly aria-readonly="true"></div>
+            <div class="field"><label for="{{ form.data.id_for_label }}">Data</label>{{ form.data }}{% for error in form.data.errors %}<span class="field__error">{{ error }}</span>{% endfor %}</div>
+            <div class="field"><label for="{{ form.validade.id_for_label }}">Validade</label>{{ form.validade }}{% for error in form.validade.errors %}<span class="field__error">{{ error }}</span>{% endfor %}</div>
+            <div class="field"><label for="{{ form.status.id_for_label }}">Status</label>{{ form.status }}{% for error in form.status.errors %}<span class="field__error">{{ error }}</span>{% endfor %}</div>
+            <div class="field field--client"><label for="{{ form.cliente_nome.id_for_label }}">Cliente *</label>{{ form.cliente_nome }}{% for error in form.cliente_nome.errors %}<span class="field__error">{{ error }}</span>{% endfor %}</div>
+            <div class="field"><label for="{{ form.cliente_telefone.id_for_label }}">Telefone</label>{{ form.cliente_telefone }}</div>
+            <div class="field"><label for="{{ form.modo_apresentacao.id_for_label }}">Apresentação no PDF</label>{{ form.modo_apresentacao }}<small>Detalhado mostra a composição comercial; preço global mostra somente o total.</small>{% for error in form.modo_apresentacao.errors %}<span class="field__error">{{ error }}</span>{% endfor %}</div>
+            <div class="field field--address"><label for="{{ form.endereco_obra.id_for_label }}">Endereço da obra</label>{{ form.endereco_obra }}</div>
+        </div>
+    </details>
+
+    <details class="builder-section" data-builder-section="materials" data-section-key="materials" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">▦</span><div><h2>Materiais fornecidos / cobrados</h2><p>Materiais que você fornece e cobra do cliente.</p></div></div>
+            <strong data-section-total="materials">R$ 0,00</strong>
+        </summary>
+        <div class="builder-add-row builder-add-row--material">
+            <div class="field field--wide"><label for="material-catalog">Material</label>
+                <select id="material-catalog"><option value="">Selecionar material...</option>{% for item in materiais_fornecidos %}<option value="{{ item.pk }}">{{ item.nome }}</option>{% endfor %}</select>
+            </div>
+            <div class="field"><label for="material-qty">Qtd.</label><input id="material-qty" type="number" min="0.001" step="0.001" value="1"></div>
+            <div class="field"><label for="material-unit">Unid.</label><input id="material-unit" placeholder="un"></div>
+            <div class="field"><label for="material-price">Preço unitário</label><input id="material-price" type="number" min="0" step="0.01" value="0"></div>
+            <div class="field"><label for="material-supplier">Fornecedor</label><input id="material-supplier" placeholder="Opcional"></div>
+            <button class="builder-add-button" type="button" data-add="materials" aria-label="Adicionar material">＋</button>
+        </div>
+        <div class="builder-table-wrap" data-table-wrap="materials" role="region" aria-label="Materiais adicionados" tabindex="0" hidden>
+            <table class="builder-table builder-table--materials">
+                <caption class="visually-hidden">Materiais fornecidos ou cobrados adicionados ao orçamento</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col" class="align-right">Qtd.</th><th scope="col">Unid.</th><th scope="col" class="align-right">Preço unit.</th><th scope="col">Fornecedor</th><th scope="col" class="align-right">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+                <tbody data-items="materials"></tbody>
+            </table>
+        </div>
+        <div class="builder-empty" data-empty="materials">Nenhum material adicionado</div>
+    </details>
+
+    <details class="builder-section" data-builder-section="clientMaterials" data-section-key="client-materials" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">≣</span><div><h2>Lista de materiais para o cliente comprar</h2><p>Lista separada e informativa. Não soma no orçamento.</p></div></div>
+            <span class="section-count" data-section-count="clientMaterials">0 itens</span>
+        </summary>
+        <div class="builder-add-row builder-add-row--client">
+            <div class="field field--wide"><label for="client-description">Descrição do material</label><input id="client-description" list="materials-reference" placeholder="Ex.: Cabo flexível 2,5 mm²"></div>
+            <datalist id="materials-reference">{% for item in materiais_referencia %}<option value="{{ item.nome }}" data-id="{{ item.pk }}">{% endfor %}</datalist>
+            <div class="field"><label for="client-qty">Qtd.</label><input id="client-qty" type="number" min="0.001" step="0.001" value="1"></div>
+            <div class="field"><label for="client-unit">Unid.</label><input id="client-unit" placeholder="un"></div>
+            <div class="field field--note"><label for="client-note">Observação</label><input id="client-note" placeholder="Marca ou especificação opcional"></div>
+            <button class="builder-add-button" type="button" data-add="clientMaterials" aria-label="Adicionar à lista">＋</button>
+        </div>
+        <div class="builder-table-wrap" data-table-wrap="clientMaterials" role="region" aria-label="Materiais para o cliente comprar" tabindex="0" hidden>
+            <table class="builder-table builder-table--client">
+                <caption class="visually-hidden">Materiais adicionados à lista de compra do cliente</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col" class="align-right">Qtd.</th><th scope="col">Unid.</th><th scope="col">Observação</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+                <tbody data-items="clientMaterials"></tbody>
+            </table>
+        </div>
+        <div class="builder-empty" data-empty="clientMaterials">Nenhum material na lista de compra</div>
+    </details>
+
+    <details class="builder-section" data-builder-section="supplies" data-section-key="supplies" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">◇</span><div><h2>Insumos internos</h2><p>Consumíveis e materiais de uso do eletricista.</p></div></div>
+            <strong data-section-total="supplies">R$ 0,00</strong>
+        </summary>
+        <div class="builder-add-row builder-add-row--supply">
+            <div class="field field--wide"><label for="supply-catalog">Insumo</label>
+                <select id="supply-catalog"><option value="">Selecionar insumo...</option>{% for item in insumos %}<option value="{{ item.pk }}">{{ item.nome }}</option>{% endfor %}</select>
+            </div>
+            <div class="field"><label for="supply-qty">Qtd.</label><input id="supply-qty" type="number" min="0.001" step="0.001" value="1"></div>
+            <div class="field"><label for="supply-unit">Unid.</label><input id="supply-unit" placeholder="un"></div>
+            <div class="field"><label for="supply-price">Preço unitário</label><input id="supply-price" type="number" min="0" step="0.01" value="0"></div>
+            <button class="builder-add-button" type="button" data-add="supplies" aria-label="Adicionar insumo">＋</button>
+        </div>
+        <div class="builder-table-wrap" data-table-wrap="supplies" role="region" aria-label="Insumos internos adicionados" tabindex="0" hidden>
+            <table class="builder-table builder-table--supplies">
+                <caption class="visually-hidden">Insumos internos adicionados ao orçamento</caption>
+                <thead><tr><th scope="col">Insumo</th><th scope="col" class="align-right">Qtd.</th><th scope="col">Unid.</th><th scope="col" class="align-right">Preço unit.</th><th scope="col" class="align-right">Subtotal</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+                <tbody data-items="supplies"></tbody>
+            </table>
+        </div>
+        <div class="builder-empty" data-empty="supplies">Nenhum insumo adicionado</div>
+    </details>
+
+    <details class="builder-section" data-builder-section="services" data-section-key="services" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">⚡</span><div><h2>Serviços</h2><p>Dificuldade e altura são calculadas individualmente.</p></div></div>
+            <strong data-section-total="services">R$ 0,00</strong>
+        </summary>
+        <div class="builder-add-row builder-add-row--service">
+            <div class="field field--wide"><label for="service-catalog">Serviço</label>
+                <select id="service-catalog"><option value="">Selecionar serviço...</option>{% for item in servicos_catalogo %}<option value="{{ item.pk }}">{{ item.nome }}</option>{% endfor %}</select>
+            </div>
+            <div class="field"><label for="service-qty">Qtd.</label><input id="service-qty" type="number" min="0.001" step="0.001" value="1"></div>
+            <div class="field"><label for="service-price">Preço unitário</label><input id="service-price" type="number" min="0" step="0.01" value="0"></div>
+            <div class="field"><label for="service-difficulty">Dificuldade</label><select id="service-difficulty"><option value="">Opcional</option>{% for item in dificuldades %}<option value="{{ item.pk }}">{{ item.nome }} — {{ item.percentual }}%</option>{% endfor %}</select></div>
+            <div class="field"><label for="service-height">Altura</label><select id="service-height"><option value="">Opcional</option>{% for item in alturas %}<option value="{{ item.pk }}">{{ item.nome }} — {{ item.percentual }}%</option>{% endfor %}</select></div>
+            <button class="builder-add-button" type="button" data-add="services" aria-label="Adicionar serviço">＋</button>
+        </div>
+        <div class="builder-table-wrap" data-table-wrap="services" role="region" aria-label="Serviços adicionados" tabindex="0" hidden>
+            <table class="builder-table builder-table--services">
+                <caption class="visually-hidden">Serviços adicionados ao orçamento</caption>
+                <thead><tr><th scope="col">Serviço</th><th scope="col" class="align-right">Qtd.</th><th scope="col" class="align-right">Preço unit.</th><th scope="col">Dificuldade</th><th scope="col">Altura</th><th scope="col" class="align-right">Total</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+                <tbody data-items="services"></tbody>
+            </table>
+        </div>
+        <div class="builder-empty" data-empty="services">Nenhum serviço adicionado</div>
+    </details>
+
+    <details class="builder-section" data-section-key="financial-model" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">▥</span><div><h2>Custos e modelo financeiro</h2><p>Parâmetros usados somente no controle interno.</p></div></div>
+        </summary>
+        <div class="finance-grid">
+            <article class="finance-block">
+                <h3>Deslocamento</h3>
+                <div class="builder-fields builder-fields--finance">
+                    <div class="field field--wide"><label for="{{ form.veiculo.id_for_label }}">Veículo</label>{{ form.veiculo }}</div>
+                    <div class="field"><label for="{{ form.distancia_km.id_for_label }}">Distância (km)</label>{{ form.distancia_km }}</div>
+                    <div class="calculated-field"><span>Custo calculado</span><strong data-summary="transport">R$ 0,00</strong></div>
+                </div>
+            </article>
+            <article class="finance-block">
+                <div class="finance-block__heading"><h3>Outros custos</h3><button class="mini-link" type="button" id="toggle-cost">＋ Adicionar custo</button></div>
+                <div class="other-cost-entry" id="other-cost-entry" hidden>
+                    <div class="field"><label for="cost-description">Descrição</label><input id="cost-description" placeholder="Ex.: estacionamento"></div>
+                    <div class="field"><label for="cost-value">Valor</label><input id="cost-value" type="number" min="0" step="0.01" value="0"></div>
+                    <button class="button button--primary button--small" type="button" data-add="otherCosts">Salvar</button>
+                    <button class="button button--ghost button--small" type="button" id="cancel-cost">Cancelar</button>
+                </div>
+                <div class="builder-table-wrap builder-table-wrap--costs" data-table-wrap="otherCosts" role="region" aria-label="Outros custos adicionados" tabindex="0" hidden>
+                    <table class="builder-table builder-table--costs">
+                        <caption class="visually-hidden">Outros custos adicionados ao orçamento</caption>
+                        <thead><tr><th scope="col">Descrição</th><th scope="col" class="align-right">Valor</th><th scope="col"><span class="visually-hidden">Ações</span></th></tr></thead>
+                        <tbody data-items="otherCosts"></tbody>
+                    </table>
+                </div>
+                <div class="cost-total"><span>Total de outros custos</span><strong data-section-total="otherCosts">R$ 0,00</strong></div>
+            </article>
+            <article class="finance-block finance-block--labor">
+                <h3>Mão de obra e percentuais</h3>
+                <div class="builder-fields builder-fields--labor">
+                    <div class="field field--wide"><label for="{{ form.metodo_mao_obra.id_for_label }}">Método de cálculo</label>{{ form.metodo_mao_obra }}</div>
+                    <div class="field" data-time-field><label for="{{ form.tempo_estimado_horas.id_for_label }}">Tempo estimado (h)</label>{{ form.tempo_estimado_horas }}</div>
+                    <div class="field" data-time-field><label for="{{ form.valor_hora.id_for_label }}">Valor hora</label>{{ form.valor_hora }}</div>
+                    <div class="field"><label for="{{ form.percentual_ferramentas.id_for_label }}">Ferramentas (%)</label>{{ form.percentual_ferramentas }}</div>
+                    <div class="field"><label for="{{ form.percentual_empresa.id_for_label }}">Empresa (%)</label>{{ form.percentual_empresa }}</div>
+                    <div class="field"><label for="{{ form.percentual_lucro.id_for_label }}">Lucro líquido (%)</label>{{ form.percentual_lucro }}</div>
+                    <div class="field"><label for="{{ form.desconto.id_for_label }}">Desconto (R$)</label>{{ form.desconto }}</div>
+                </div>
+            </article>
+        </div>
+    </details>
+
+    <details class="builder-section builder-summary" data-section-key="financial-summary" open>
+        <summary class="builder-section__header">
+            <div><span class="section-icon">▤</span><div><h2>Resumo financeiro interno</h2><p>Visão completa dos custos e da formação do preço.</p></div></div>
+            <strong data-summary="final">R$ 0,00</strong>
+        </summary>
+        <div class="internal-alert">⚠ Resumo financeiro interno. Não será exibido na proposta do cliente.</div>
+        <dl class="builder-summary__list">
+            <div><dt>Materiais fornecidos</dt><dd data-summary="materials">R$ 0,00</dd></div>
+            <div><dt>Insumos internos</dt><dd data-summary="supplies">R$ 0,00</dd></div>
+            <div><dt>Lista para cliente comprar <small>(informativo, não soma)</small></dt><dd data-summary="clientCount">0 itens</dd></div>
+            <div><dt>Serviços base</dt><dd data-summary="servicesBase">R$ 0,00</dd></div>
+            <div><dt>Acréscimo por dificuldade</dt><dd data-summary="difficulty">R$ 0,00</dd></div>
+            <div><dt>Acréscimo por altura</dt><dd data-summary="height">R$ 0,00</dd></div>
+            <div><dt>Total dos serviços</dt><dd data-summary="services">R$ 0,00</dd></div>
+            <div><dt>Método de mão de obra</dt><dd data-summary="laborMethod">Por serviços lançados</dd></div>
+            <div><dt>Valor da mão de obra</dt><dd data-summary="labor">R$ 0,00</dd></div>
+            <div><dt>Deslocamento</dt><dd data-summary="transport">R$ 0,00</dd></div>
+            <div><dt>Outros custos</dt><dd data-summary="otherCosts">R$ 0,00</dd></div>
+            <div><dt>Custos diretos</dt><dd data-summary="directCosts">R$ 0,00</dd></div>
+            <div><dt>Reserva para ferramentas</dt><dd data-summary="tools">R$ 0,00</dd></div>
+            <div><dt>Reserva da empresa</dt><dd data-summary="company">R$ 0,00</dd></div>
+            <div><dt>Lucro líquido</dt><dd data-summary="profit">R$ 0,00</dd></div>
+            <div><dt>Desconto comercial</dt><dd data-summary="discount">R$ 0,00</dd></div>
+            <div class="builder-summary__total"><dt>Total final</dt><dd data-summary="final">R$ 0,00</dd></div>
+        </dl>
+    </details>
+
+    <section class="notes-grid">
+        <details class="builder-section" data-section-key="internal-notes" open><summary class="builder-section__header"><div><span class="section-icon">✎</span><h2>Observações internas</h2></div></summary><div class="notes-field">{{ form.observacoes_internas }}</div></details>
+        <details class="builder-section" data-section-key="client-notes" open><summary class="builder-section__header"><div><span class="section-icon">✎</span><h2>Observações para o cliente</h2></div></summary><div class="notes-field">{{ form.observacoes_cliente }}</div></details>
+    </section>
+
+    <footer class="builder-footer">
+        <span>Todos os totais serão validados novamente pelo sistema.</span>
+        <div><a class="button button--ghost" href="{% url 'orcamentos:lista' %}">Cancelar</a><button class="button button--primary" type="submit">{% if novo %}Salvar orçamento{% else %}Salvar alterações{% endif %}</button></div>
+    </footer>
+</form>
+{{ dados_catalogos|json_script:"quote-catalogs" }}
+{{ dados_itens|json_script:"quote-initial-items" }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/quote-builder.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,15 @@
+{% if form.non_field_errors %}<div class="form-errors">{{ form.non_field_errors }}</div>{% endif %}
+<div class="form-grid">
+{% for field in form %}
+    {% if field.is_hidden %}
+        {{ field }}
+    {% else %}
+    <div class="field {% if field.field.widget.input_type == 'checkbox' %}field--checkbox{% endif %}" data-field-name="{{ field.name }}"{% if field.name == "quantidade_unidades_caixa" or field.name == "preco_unitario_calculado" %} data-box-field{% if form.forma_compra.value != "caixa" %} hidden{% endif %}{% endif %}>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<span class="field__error">{{ error }}</span>{% endfor %}
+    </div>
+    {% endif %}
+{% endfor %}
+</div>

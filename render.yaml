@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: orcamento-eletrico
+    runtime: python
+    plan: free
+    region: virginia
+    buildCommand: bash scripts/render-build.sh
+    startCommand: >-
+      python -m gunicorn eletrico.wsgi:application
+      --bind 0.0.0.0:$PORT
+      --workers 1
+      --threads 2
+      --timeout 120
+      --access-logfile -
+      --error-logfile -
+    healthCheckPath: /health/
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_REQUIRE_LOGIN
+        value: "true"
+      - key: DJANGO_HTTPS_MODE
+        value: "true"
+      - key: DJANGO_DATABASE_SSL_REQUIRE
+        value: "true"
+      - key: DJANGO_DB_DISABLE_SERVER_SIDE_CURSORS
+        value: "true"
+      - key: DJANGO_SECURE_HSTS_SECONDS
+        value: "3600"
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false

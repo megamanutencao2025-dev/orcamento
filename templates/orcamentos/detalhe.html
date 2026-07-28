@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ orcamento.numero }} · {{ app_name }}{% endblock %}
+{% block page_name %}Detalhes do orçamento{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div><p class="eyebrow">{{ orcamento.numero }}</p><h1>{{ orcamento.cliente_nome }}</h1><p>{{ orcamento.endereco_obra|default:"Endereço da obra não informado" }}</p></div>
+    <div class="row-actions"><a class="button button--primary" href="{% url 'orcamentos:proposta_pdf' orcamento.pk %}" target="_blank" rel="noopener">Imprimir / PDF</a><a class="button button--ghost" href="{% url 'orcamentos:editar' orcamento.pk %}">Editar dados</a><span class="badge badge--info">PDF: {{ orcamento.get_modo_apresentacao_display }}</span><span class="badge badge--{{ orcamento.status }}">{{ orcamento.get_status_display }}</span></div>
+</section>
+<div class="quote-layout">
+    <div class="stack">
+        <details class="panel item-section" open>
+            <summary class="panel__header"><div><h2>Materiais fornecidos/cobrados</h2><p>Entram no total do orçamento.</p></div><strong>R$ {{ orcamento.subtotal_materiais|floatformat:2 }}</strong></summary>
+            <form class="inline-form" method="post" action="{% url 'orcamentos:adicionar_item' orcamento.pk 'material' %}">
+                {% csrf_token %}{% for field in material_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="button button--primary button--small" type="submit">Adicionar</button>
+            </form>
+            <div class="table-wrap">
+                <table><thead><tr><th>Material</th><th>Unidade</th><th class="align-right">Quantidade</th><th class="align-right">Preço unitário</th><th class="align-right">Subtotal</th><th></th></tr></thead>
+                <tbody>{% for item in orcamento.materiais_fornecidos.all %}<tr><td><strong>{{ item.descricao }}</strong>{% if item.fornecedor %}<small>{{ item.fornecedor }}</small>{% endif %}</td><td>{{ item.unidade }}</td><td class="align-right">{{ item.quantidade }}</td><td class="align-right">R$ {{ item.preco_unitario|floatformat:2 }}</td><td class="align-right"><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td><td>{% include "orcamentos/partials/remove_item.html" with tipo="material" %}</td></tr>{% empty %}<tr><td colspan="6"><div class="empty-state empty-state--small">Nenhum material fornecido.</div></td></tr>{% endfor %}</tbody></table>
+            </div>
+        </details>
+
+        <details class="panel item-section">
+            <summary class="panel__header"><div><h2>Lista para o cliente comprar</h2><p>Informativa; não entra no cálculo.</p></div><strong>{{ orcamento.materiais_cliente.count }} itens</strong></summary>
+            <form class="inline-form" method="post" action="{% url 'orcamentos:adicionar_item' orcamento.pk 'cliente' %}">
+                {% csrf_token %}{% for field in cliente_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="button button--primary button--small" type="submit">Adicionar</button>
+            </form>
+            <div class="table-wrap"><table><thead><tr><th>Descrição</th><th>Unidade</th><th class="align-right">Quantidade</th><th>Observação</th><th></th></tr></thead><tbody>
+            {% for item in orcamento.materiais_cliente.all %}<tr><td><strong>{{ item.descricao }}</strong></td><td>{{ item.unidade }}</td><td class="align-right">{{ item.quantidade }}</td><td>{{ item.observacao|default:"—" }}</td><td>{% include "orcamentos/partials/remove_item.html" with tipo="cliente" %}</td></tr>{% empty %}<tr><td colspan="5"><div class="empty-state empty-state--small">Nenhum material para compra.</div></td></tr>{% endfor %}
+            </tbody></table></div>
+        </details>
+
+        <details class="panel item-section">
+            <summary class="panel__header"><div><h2>Insumos internos</h2><p>Custos do eletricista; não aparecem detalhados ao cliente.</p></div><strong>R$ {{ orcamento.subtotal_insumos|floatformat:2 }}</strong></summary>
+            <form class="inline-form" method="post" action="{% url 'orcamentos:adicionar_item' orcamento.pk 'insumo' %}">
+                {% csrf_token %}{% for field in insumo_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="button button--primary button--small" type="submit">Adicionar</button>
+            </form>
+            <div class="table-wrap"><table><thead><tr><th>Insumo</th><th>Unidade</th><th class="align-right">Quantidade</th><th class="align-right">Preço</th><th class="align-right">Subtotal</th><th></th></tr></thead><tbody>
+            {% for item in orcamento.insumos_internos.all %}<tr><td><strong>{{ item.descricao }}</strong></td><td>{{ item.unidade }}</td><td class="align-right">{{ item.quantidade }}</td><td class="align-right">R$ {{ item.preco_unitario|floatformat:2 }}</td><td class="align-right"><strong>R$ {{ item.subtotal|floatformat:2 }}</strong></td><td>{% include "orcamentos/partials/remove_item.html" with tipo="insumo" %}</td></tr>{% empty %}<tr><td colspan="6"><div class="empty-state empty-state--small">Nenhum insumo interno.</div></td></tr>{% endfor %}
+            </tbody></table></div>
+        </details>
+
+        <details class="panel item-section" open>
+            <summary class="panel__header"><div><h2>Serviços</h2><p>Dificuldade e altura são aplicadas por item.</p></div><strong>R$ {{ orcamento.subtotal_servicos_final|floatformat:2 }}</strong></summary>
+            <form class="inline-form" method="post" action="{% url 'orcamentos:adicionar_item' orcamento.pk 'servico' %}">
+                {% csrf_token %}{% for field in servico_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="button button--primary button--small" type="submit">Adicionar</button>
+            </form>
+            <div class="table-wrap"><table><thead><tr><th>Serviço</th><th class="align-right">Quantidade</th><th class="align-right">Base</th><th>Dificuldade</th><th>Altura</th><th class="align-right">Total</th><th></th></tr></thead><tbody>
+            {% for item in orcamento.servicos.all %}<tr><td><strong>{{ item.descricao }}</strong><small>{{ item.unidade }}</small></td><td class="align-right">{{ item.quantidade }}</td><td class="align-right">R$ {{ item.subtotal_base|floatformat:2 }}</td><td>{{ item.dificuldade|default:"0%" }}<small>+ R$ {{ item.valor_dificuldade|floatformat:2 }}</small></td><td>{{ item.altura|default:"0%" }}<small>+ R$ {{ item.valor_altura|floatformat:2 }}</small></td><td class="align-right"><strong>R$ {{ item.subtotal_final|floatformat:2 }}</strong></td><td>{% include "orcamentos/partials/remove_item.html" with tipo="servico" %}</td></tr>{% empty %}<tr><td colspan="7"><div class="empty-state empty-state--small">Nenhum serviço lançado.</div></td></tr>{% endfor %}
+            </tbody></table></div>
+        </details>
+
+        <details class="panel item-section">
+            <summary class="panel__header"><div><h2>Outros custos</h2><p>Custos dinâmicos de controle interno.</p></div><strong>R$ {{ orcamento.outros_custos_total|floatformat:2 }}</strong></summary>
+            <form class="inline-form inline-form--short" method="post" action="{% url 'orcamentos:adicionar_item' orcamento.pk 'custo' %}">
+                {% csrf_token %}{% for field in custo_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="button button--primary button--small" type="submit">Adicionar custo</button>
+            </form>
+            <div class="compact-list">{% for item in orcamento.outros_custos.all %}<article class="compact-list__item"><strong>{{ item.descricao }}</strong><div class="row-actions"><strong>R$ {{ item.valor|floatformat:2 }}</strong>{% include "orcamentos/partials/remove_item.html" with tipo="custo" %}</div></article>{% empty %}<div class="empty-state empty-state--small">Nenhum outro custo.</div>{% endfor %}</div>
+        </details>
+        <section class="panel">
+            <header class="panel__header"><div><h2>Observações</h2></div></header>
+            <dl class="detail-list"><dt>Para o cliente</dt><dd>{{ orcamento.observacoes_cliente|default:"—" }}</dd><dt>Internas</dt><dd>{{ orcamento.observacoes_internas|default:"—" }}</dd></dl>
+        </section>
+    </div>
+    <aside class="panel summary-panel">
+        <header class="panel__header"><div><h2>Resumo financeiro</h2><p>Interno. Não será exibido na proposta.</p></div></header>
+        <dl class="summary-list">
+            <div><dt>Materiais fornecidos</dt><dd>R$ {{ orcamento.subtotal_materiais|floatformat:2 }}</dd></div>
+            <div><dt>Insumos internos</dt><dd>R$ {{ orcamento.subtotal_insumos|floatformat:2 }}</dd></div>
+            <div><dt>Serviços base</dt><dd>R$ {{ orcamento.subtotal_servicos_base|floatformat:2 }}</dd></div>
+            <div><dt>Acréscimo dificuldade</dt><dd>R$ {{ orcamento.total_dificuldade|floatformat:2 }}</dd></div>
+            <div><dt>Acréscimo altura</dt><dd>R$ {{ orcamento.total_altura|floatformat:2 }}</dd></div>
+            <div><dt>Mão de obra</dt><dd>R$ {{ orcamento.valor_mao_obra|floatformat:2 }}</dd></div>
+            <div><dt>Deslocamento</dt><dd>R$ {{ orcamento.custo_deslocamento|floatformat:2 }}</dd></div>
+            <div><dt>Outros custos</dt><dd>R$ {{ orcamento.outros_custos_total|floatformat:2 }}</dd></div>
+            <div><dt>Reserva ferramentas</dt><dd>R$ {{ orcamento.reserva_ferramentas|floatformat:2 }}</dd></div>
+            <div><dt>Reserva empresa</dt><dd>R$ {{ orcamento.reserva_empresa|floatformat:2 }}</dd></div>
+            <div><dt>Lucro líquido</dt><dd>R$ {{ orcamento.lucro_liquido|floatformat:2 }}</dd></div>
+            <div><dt>Desconto comercial</dt><dd>R$ {{ orcamento.desconto|floatformat:2 }}</dd></div>
+            <div class="summary-list__total"><dt>Total final</dt><dd>R$ {{ orcamento.total_final|floatformat:2 }}</dd></div>
+        </dl>
+        <form method="post" action="{% url 'orcamentos:excluir' orcamento.pk %}" data-confirm="Excluir definitivamente este orçamento?">
+            {% csrf_token %}<button class="button button--danger-ghost button--block" type="submit">Excluir orçamento</button>
+        </form>
+    </aside>
+</div>
+{% endblock %}

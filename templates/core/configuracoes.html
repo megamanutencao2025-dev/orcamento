@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Configurações · {{ app_name }}{% endblock %}
+{% block page_name %}Configurações{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><p class="eyebrow">Preferências</p><h1>Configurações</h1><p>Dados profissionais e padrões usados em novos orçamentos.</p></div>
+</section>
+<form method="post" class="panel form-panel">
+    {% csrf_token %}
+    <header class="panel__header"><div><h2>Dados do eletricista</h2><p>Essas informações serão usadas nos documentos.</p></div></header>
+    {% include "partials/form_fields.html" %}
+    <div class="form-actions"><button class="button button--primary" type="submit">Salvar configurações</button></div>
+</form>
+{% endblock %}

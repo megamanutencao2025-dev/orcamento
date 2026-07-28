@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{% if novo %}Novo orçamento{% else %}Editar orçamento{% endif %} · {{ app_name }}{% endblock %}
+{% block page_name %}{% if novo %}Novo orçamento{% else %}Editar orçamento{% endif %}{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div><p class="eyebrow">Uso interno</p><h1>{% if novo %}Novo orçamento{% else %}Editar {{ orcamento.numero }}{% endif %}</h1><p>Cadastre os dados gerais e, na próxima tela, os itens e custos.</p></div>
+</section>
+<form method="post" class="panel form-panel form-panel--dense">
+    {% csrf_token %}
+    <header class="panel__header"><div><h2>Dados e modelo financeiro</h2><p>Os valores padrão vêm das configurações.</p></div></header>
+    {% include "partials/form_fields.html" %}
+    <div class="form-actions">
+        <a class="button button--ghost" href="{% url 'orcamentos:lista' %}">Cancelar</a>
+        <button class="button button--primary" type="submit">{% if novo %}Criar e adicionar itens{% else %}Salvar alterações{% endif %}</button>
+    </div>
+</form>
+{% endblock %}

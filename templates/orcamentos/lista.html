@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Orçamentos · {{ app_name }}{% endblock %}
+{% block page_name %}Orçamentos{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><p class="eyebrow">Controle comercial</p><h1>Orçamentos</h1><p>Consulte, filtre e acompanhe todas as propostas.</p></div>
+    <a class="button button--primary" href="{% url 'orcamentos:novo' %}">＋ Novo orçamento</a>
+</section>
+<form class="filter-bar" method="get">
+    <label class="search-field"><span aria-hidden="true">⌕</span><input name="q" value="{{ busca }}" placeholder="Buscar cliente ou número"></label>
+    <select name="status" aria-label="Filtrar por status">
+        <option value="">Todos os status</option>
+        <option value="rascunho" {% if status_atual == "rascunho" %}selected{% endif %}>Rascunho</option>
+        <option value="enviado" {% if status_atual == "enviado" %}selected{% endif %}>Enviado</option>
+        <option value="aprovado" {% if status_atual == "aprovado" %}selected{% endif %}>Aprovado</option>
+        <option value="recusado" {% if status_atual == "recusado" %}selected{% endif %}>Recusado</option>
+    </select>
+    <button class="button button--ghost" type="submit">Filtrar</button>
+</form>
+<section class="panel">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Validade</th><th>Status</th><th class="align-right">Total final</th><th>Ações</th></tr></thead>
+            <tbody>
+            {% for orcamento in orcamentos %}
+                <tr>
+                    <td><strong>{{ orcamento.numero }}</strong></td>
+                    <td>{{ orcamento.cliente_nome }}{% if orcamento.cliente_telefone %}<small>{{ orcamento.cliente_telefone }}</small>{% endif %}</td>
+                    <td>{{ orcamento.data|date:"d/m/Y" }}</td>
+                    <td>{{ orcamento.validade|date:"d/m/Y" }}</td>
+                    <td><span class="badge badge--{{ orcamento.status }}">{{ orcamento.get_status_display }}</span></td>
+                    <td class="align-right"><strong>R$ {{ orcamento.total_final|floatformat:2 }}</strong></td>
+                    <td><div class="row-actions"><a class="table-link" href="{% url 'orcamentos:detalhe' orcamento.pk %}">Visualizar</a><a class="table-link" href="{% url 'orcamentos:editar' orcamento.pk %}">Editar</a><a class="table-link" href="{% url 'orcamentos:proposta_pdf' orcamento.pk %}" target="_blank" rel="noopener">PDF</a></div></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7"><div class="empty-state"><strong>Nenhum resultado.</strong><span>Altere os filtros ou crie um orçamento.</span></div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7fb">
+    <script>
+        (() => {
+            const saved = localStorage.getItem("pricewise-theme");
+            const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
+        })();
+    </script>
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <a class="brand" href="{% url 'core:dashboard' %}">
+                <span class="brand__mark" aria-hidden="true">⚡</span>
+                <span><strong>Gestor</strong><small>Elétrico</small></span>
+            </a>
+            <nav class="nav" aria-label="Navegação principal">
+                <a class="nav__item {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'core:dashboard' %}">
+                    <span aria-hidden="true">▦</span> Visão geral
+                </a>
+                <p class="nav__label">Operação</p>
+                <a class="nav__item {% if request.resolver_match.app_name == 'orcamentos' and request.resolver_match.url_name != 'novo' %}is-active{% endif %}" href="{% url 'orcamentos:lista' %}">
+                    <span aria-hidden="true">▤</span> Orçamentos
+                </a>
+                <a class="nav__item {% if request.resolver_match.url_name == 'novo' %}is-active{% endif %}" href="{% url 'orcamentos:novo' %}">
+                    <span aria-hidden="true">＋</span> Novo orçamento
+                </a>
+                <a class="nav__item {% if request.resolver_match.app_name == 'cadastros' %}is-active{% endif %}" href="{% url 'cadastros:index' %}">
+                    <span aria-hidden="true">⌑</span> Cadastros
+                </a>
+                <a class="nav__item {% if request.resolver_match.app_name == 'ferramentas' %}is-active{% endif %}" href="{% url 'ferramentas:index' %}">
+                    <span aria-hidden="true">⌁</span> Ferramentas
+                </a>
+                <p class="nav__label">Sistema</p>
+                <a class="nav__item {% if request.resolver_match.url_name == 'configuracoes' %}is-active{% endif %}" href="{% url 'core:configuracoes' %}">
+                    <span aria-hidden="true">⚙</span> Configurações
+                </a>
+            </nav>
+            <div class="sidebar__footer">
+                <span class="status-dot"></span>
+                <span>
+                    <strong>{{ database_scope_label }}</strong>
+                    <small>{{ database_backend_label }}</small>
+                </span>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <button class="icon-button menu-button" id="menu-toggle" type="button" aria-label="Abrir menu">☰</button>
+                <div class="topbar__context">
+                    <small>Sistema operacional</small>
+                    <strong>{% block page_name %}Painel{% endblock %}</strong>
+                </div>
+                <div class="topbar__actions">
+                    {% if network_login_required and user.is_authenticated %}
+                        <div class="topbar__account">
+                            <span class="topbar__account-name">{{ user.get_short_name|default:user.username }}</span>
+                            <a class="icon-button" href="{% url 'password_change' %}" aria-label="Alterar senha" title="Alterar senha">⚿</a>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button class="icon-button" type="submit" aria-label="Sair" title="Sair">↪</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                    <button class="icon-button" id="theme-toggle" type="button" aria-label="Alternar tema" aria-pressed="false">◐</button>
+                    <a class="button button--primary button--small topbar__new-quote" href="{% url 'orcamentos:novo' %}">＋ Novo orçamento</a>
+                </div>
+            </header>
+
+            <main class="content">
+                {% if messages %}
+                    <div class="messages" aria-live="polite">
+                        {% for message in messages %}
+                            <div class="message message--{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <script src="{% static 'js/app.js' %}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

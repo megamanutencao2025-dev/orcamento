@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Cadastros · {{ app_name }}{% endblock %}
+{% block page_name %}Cadastros{% endblock %}
+{% block styles %}{% if secao == "materiais" %}<link rel="stylesheet" href="{% static 'css/material-import.css' %}">{% endif %}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><p class="eyebrow">Base operacional</p><h1>Cadastros</h1><p>Itens reutilizáveis para agilizar seus orçamentos.</p></div>
+</section>
+<nav class="tabs" aria-label="Tipos de cadastro">
+    {% for slug, dados in secoes.items %}
+        <a class="tabs__item {% if slug == secao %}is-active{% endif %}" href="{% url 'cadastros:secao' slug %}">{{ dados.2 }}</a>
+    {% endfor %}
+</nav>
+
+{% if secao == "materiais" %}
+<section class="import-panel" id="material-import">
+    <header class="import-panel__header">
+        <div class="import-panel__icon">↗</div>
+        <div>
+            <h2>Importar produto por URL</h2>
+            <p>Busque nome, preço e imagem; revise tudo antes de salvar.</p>
+        </div>
+        <div class="supported-stores" aria-label="Lojas suportadas">
+            <span>Mercado Livre</span><span>Amazon</span><span>Shopee</span><span>Eletrorastro</span><span>Delupo</span>
+        </div>
+    </header>
+    <form class="import-search" id="material-import-form" data-endpoint="{% url 'cadastros:importar_material_url' %}">
+        {% csrf_token %}
+        <label class="field" for="product-url">
+            <span>URL do produto</span>
+            <input id="product-url" type="url" required placeholder="https://www.loja.com.br/produto...">
+        </label>
+        <button class="button button--primary" id="import-search-button" type="submit">
+            <span class="button-label">Buscar produto</span>
+        </button>
+    </form>
+    <div class="import-feedback" id="import-feedback" role="status" aria-live="polite"></div>
+    <article class="import-preview" id="import-preview" hidden>
+        <div class="import-preview__image">
+            <img id="import-preview-image" alt="" referrerpolicy="no-referrer">
+            <span id="import-preview-placeholder">Sem imagem</span>
+        </div>
+        <div class="import-preview__content">
+            <div class="import-preview__meta"><span id="import-preview-store"></span><span id="import-preview-confidence"></span></div>
+            <h3 id="import-preview-name"></h3>
+            <strong id="import-preview-price"></strong>
+            <p id="import-preview-source"></p>
+            <ul id="import-preview-warnings"></ul>
+        </div>
+        <button class="button button--primary" id="use-imported-product" type="button">Usar estes dados</button>
+    </article>
+</section>
+{% endif %}
+
+<div class="split-layout">
+    <section class="panel">
+        <header class="panel__header"><div><h2>{{ titulo_secao }}</h2><p>{{ itens|length }} item{{ itens|length|pluralize:"ns" }} cadastrado{{ itens|length|pluralize:"s" }}.</p></div></header>
+        <div class="compact-list">
+        {% for item in itens %}
+            <article class="compact-list__item {% if secao == 'materiais' %}material-list-item{% endif %}">
+                {% if secao == "materiais" %}
+                    <div class="material-thumb">
+                        {% if item.imagem_url %}<img src="{{ item.imagem_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span>▦</span>{% endif %}
+                    </div>
+                    <div class="material-list-item__body">
+                        <strong>{{ item.nome }}</strong>
+                        <div class="material-price-details">
+                            {% if item.forma_compra == "caixa" %}
+                                <span><b>Preço da caixa</b>R$ {{ item.preco_caixa|floatformat:2 }}</span>
+                                <span><b>Unidades por caixa</b>{{ item.quantidade_unidades_caixa }}</span>
+                            {% endif %}
+                            <span><b>Preço por unidade</b>R$ {{ item.preco_unitario|floatformat:2 }}</span>
+                            <span><b>Unidade de medida</b>{{ item.unidade_medida.sigla }}</span>
+                        </div>
+                        <div class="material-tags">
+                            {% if item.categoria %}<span>{{ item.categoria }}</span>{% else %}<span>Sem categoria</span>{% endif %}
+                            <span>{{ item.get_tipo_uso_display }}</span>
+                            <span>Compra por {{ item.get_forma_compra_display|lower }}</span>
+                            {% if item.fonte_importacao %}<span>↗ {{ item.fonte_importacao }}</span>{% endif %}
+                        </div>
+                    </div>
+                {% elif secao == "categorias" %}
+                    <div><strong>{{ item.nome }}</strong><small>{{ item.descricao|default:"Sem descrição" }}</small><small>{% with total=item.materiais.count %}{{ total }} {% if total == 1 %}material{% else %}materiais{% endif %}{% endwith %}</small></div>
+                {% elif secao == "unidades" %}
+                    <div><strong>{{ item.nome }} — {{ item.sigla }}</strong><small>{% if item.ativo %}Ativa{% else %}Inativa{% endif %}</small><small>{% with total=item.materiais.count %}{{ total }} {% if total == 1 %}produto vinculado{% else %}produtos vinculados{% endif %}{% endwith %}</small></div>
+                {% elif secao == "servicos" %}
+                    <div><strong>{{ item.nome }}</strong><small>R$ {{ item.preco_unitario|floatformat:2 }} / {{ item.unidade }}</small></div>
+                {% elif secao == "veiculos" %}
+                    <div><strong>{{ item.nome }}</strong><small>{{ item.km_por_litro }} km/l · combustível R$ {{ item.preco_combustivel }}</small></div>
+                {% else %}
+                    <div><strong>{{ item }}</strong>{% if item.descricao %}<small>{{ item.descricao }}</small>{% endif %}</div>
+                {% endif %}
+                <div class="row-actions">
+                    {% if secao == "materiais" and item.url_origem %}<a class="button button--ghost button--small" href="{{ item.url_origem }}" target="_blank" rel="noopener noreferrer">Origem ↗</a>{% endif %}
+                    <a class="button button--ghost button--small" href="?editar={{ item.pk }}">Editar</a>
+                    <form method="post" action="{% url 'cadastros:excluir' secao item.pk %}" data-confirm="Excluir este item?">
+                        {% csrf_token %}<button class="button button--danger-ghost button--small" type="submit">Excluir</button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <div class="empty-state"><strong>Nenhum item cadastrado.</strong><span>Use o formulário ao lado para começar.</span></div>
+        {% endfor %}
+        </div>
+    </section>
+    <form method="post" id="cadastro-form" class="panel form-panel form-panel--aside">
+        {% csrf_token %}
+        <header class="panel__header"><div><h2>{% if editando %}Editar{% else %}Adicionar{% endif %}</h2><p>{% if secao == "materiais" %}Revise forma de compra, unidade de medida e preço.{% else %}Preencha os dados essenciais.{% endif %}</p></div></header>
+        {% include "partials/form_fields.html" %}
+        {% if secao == "materiais" %}<div class="import-origin-note" id="import-origin-note" {% if not editando.url_origem %}hidden{% endif %}>Produto vinculado a uma origem externa. O preço não será atualizado sem sua confirmação.</div>{% endif %}
+        <div class="form-actions">
+            {% if editando %}<a class="button button--ghost" href="{% url 'cadastros:secao' secao %}">Cancelar</a>{% endif %}
+            <button class="button button--primary" type="submit">Salvar</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}{% if secao == "materiais" %}<script src="{% static 'js/material-import.js' %}" defer></script>{% endif %}{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Visão geral · {{ app_name }}{% endblock %}
+{% block page_name %}Visão geral{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Resumo operacional</p>
+        <h1>Bom trabalho por aí.</h1>
+        <p>Acompanhe seus orçamentos e mantenha os valores organizados.</p>
+    </div>
+    <a class="button button--primary" href="{% url 'orcamentos:novo' %}">Criar orçamento</a>
+</section>
+
+<section class="stats-grid" aria-label="Indicadores">
+    <article class="stat-card"><span>Orçamentos</span><strong>{{ total_orcamentos }}</strong><small>Total registrado</small></article>
+    <article class="stat-card"><span>Em aberto</span><strong>{{ orcamentos_abertos }}</strong><small>Rascunhos e enviados</small></article>
+    <article class="stat-card"><span>Aprovados</span><strong>{{ orcamentos_aprovados }}</strong><small>Negócios confirmados</small></article>
+    <article class="stat-card stat-card--accent"><span>Valor aprovado</span><strong>R$ {{ valor_aprovado|floatformat:2 }}</strong><small>Somatório aprovado</small></article>
+</section>
+
+<section class="panel">
+    <header class="panel__header">
+        <div><h2>Orçamentos recentes</h2><p>Últimas movimentações registradas.</p></div>
+        <a class="button button--ghost button--small" href="{% url 'orcamentos:lista' %}">Ver todos</a>
+    </header>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Status</th><th class="align-right">Total</th><th></th></tr></thead>
+            <tbody>
+            {% for orcamento in recentes %}
+                <tr>
+                    <td><strong>{{ orcamento.numero }}</strong></td>
+                    <td>{{ orcamento.cliente_nome }}</td>
+                    <td>{{ orcamento.data|date:"d/m/Y" }}</td>
+                    <td><span class="badge badge--{{ orcamento.status }}">{{ orcamento.get_status_display }}</span></td>
+                    <td class="align-right">R$ {{ orcamento.total_final|floatformat:2 }}</td>
+                    <td><a class="table-link" href="{% url 'orcamentos:detalhe' orcamento.pk %}">Abrir →</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6"><div class="empty-state"><strong>Nenhum orçamento ainda.</strong><span>Comece criando o primeiro orçamento.</span></div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

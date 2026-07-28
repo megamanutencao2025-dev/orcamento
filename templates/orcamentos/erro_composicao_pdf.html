@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}PDF bloqueado · {{ orcamento.numero }} · {{ app_name }}{% endblock %}
+{% block page_name %}Validação da proposta{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div>
+        <p class="eyebrow">{{ orcamento.numero }}</p>
+        <h1>O PDF não foi gerado</h1>
+        <p>A composição apresentada ao cliente precisa fechar exatamente com o total do orçamento.</p>
+    </div>
+    <div class="row-actions">
+        <a class="button button--primary" href="{% url 'orcamentos:editar' orcamento.pk %}">Revisar orçamento</a>
+        <a class="button button--ghost" href="{% url 'orcamentos:detalhe' orcamento.pk %}">Voltar aos detalhes</a>
+    </div>
+</section>
+
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            <h2>Diferença encontrada</h2>
+            <p>{{ mensagem_erro }}</p>
+        </div>
+        <span class="badge badge--recusado">PDF bloqueado</span>
+    </header>
+    <dl class="summary-list">
+        <div>
+            <dt>Total distribuído nas linhas comerciais</dt>
+            <dd>R$ {{ erro_composicao.total_apresentado|floatformat:2 }}</dd>
+        </div>
+        <div>
+            <dt>Total final do orçamento</dt>
+            <dd>R$ {{ erro_composicao.total_final|floatformat:2 }}</dd>
+        </div>
+        <div class="summary-list__total">
+            <dt>Diferença a revisar</dt>
+            <dd>R$ {{ erro_composicao.diferenca_absoluta|floatformat:2 }}</dd>
+        </div>
+    </dl>
+</section>
+
+<section class="panel">
+    <header class="panel__header">
+        <div>
+            {% if erro_composicao.diferenca > 0 %}
+                <h2>Valores ainda não distribuídos</h2>
+                <p>Estes componentes precisam receber uma categoria comercial antes da emissão.</p>
+            {% else %}
+                <h2>Valores distribuídos a mais</h2>
+                <p>Revise estes componentes para retirar o excesso da composição comercial.</p>
+            {% endif %}
+        </div>
+    </header>
+    <div class="compact-list">
+        {% for componente in componentes_pendentes %}
+            <article class="compact-list__item">
+                <strong>{{ componente.descricao }}</strong>
+                <strong>R$ {{ componente.valor|floatformat:2 }}</strong>
+            </article>
+        {% empty %}
+            <div class="empty-state empty-state--small">Nenhum componente foi identificado.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

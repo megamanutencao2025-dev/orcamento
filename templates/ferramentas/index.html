@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Ferramentas · {{ app_name }}{% endblock %}
+{% block page_name %}Ferramentas{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><p class="eyebrow">Análise interna</p><h1>Ferramentas</h1><p>Aprenda com serviços executados e melhore seus preços.</p></div>
+</section>
+<section class="tool-hero">
+    <div class="tool-hero__icon">⌁</div>
+    <div><span class="badge badge--info">Etapa 2</span><h2>Análise de produtividade e preço real</h2><p>A estrutura de dados e o mecanismo de cálculo já estão implantados. A interface de lançamento será construída no próximo incremento.</p></div>
+</section>
+<section class="panel">
+    <header class="panel__header"><div><h2>Histórico de análises</h2><p>Análises salvas aparecerão aqui.</p></div></header>
+    <div class="table-wrap">
+        <table><thead><tr><th>Data</th><th>Análise</th><th>Cliente/obra</th><th class="align-right">Mão de obra</th><th class="align-right">Horas-homem</th><th class="align-right">Valor/h real</th></tr></thead>
+        <tbody>{% for analise in analises %}<tr><td>{{ analise.data|date:"d/m/Y" }}</td><td><strong>{{ analise.nome }}</strong></td><td>{{ analise.cliente_obra|default:"—" }}</td><td class="align-right">R$ {{ analise.valor_base_mao_obra }}</td><td class="align-right">{{ analise.horas_homem_total }}</td><td class="align-right">R$ {{ analise.valor_hora_real }}</td></tr>{% empty %}<tr><td colspan="6"><div class="empty-state"><strong>Nenhuma análise salva.</strong><span>Os resultados aparecerão neste histórico.</span></div></td></tr>{% endfor %}</tbody></table>
+    </div>
+</section>
+{% endblock %}
