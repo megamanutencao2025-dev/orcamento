@@ -27,6 +27,12 @@ Acesse `http://127.0.0.1:8000/`.
 O inicializador usa a porta `8010`, configura os hosts detectados, exige login e
 mantém o modo HTTP local separado das configurações HTTPS da nuvem.
 
+Para encerrar somente os processos desse servidor:
+
+```powershell
+.\scripts\Stop-NetworkServer.ps1
+```
+
 Veja [Acesso pela rede](docs/acesso-rede.md).
 
 ## Render + Neon

@@ -69,7 +69,12 @@ migrações e ferramentas administrativas:
 Faça esta etapa antes de criar o serviço no Render. Assim, o primeiro deploy já
 encontrará o administrador e os orçamentos existentes.
 
-1. Encerre a janela do servidor Waitress ou qualquer `runserver`.
+1. Encerre a janela do servidor Waitress ou execute:
+
+```powershell
+.\scripts\Stop-NetworkServer.ps1
+```
+
 2. Confirme que ninguém está cadastrando dados.
 3. Abra o PowerShell na pasta do projeto.
 4. Execute:
