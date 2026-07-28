@@ -19,6 +19,10 @@ Caminho opcional para python.exe. Prioriza .venv\Scripts\python.exe.
 .PARAMETER BackupDirectory
 Diretorio externo ao projeto para a copia de seguranca do SQLite.
 
+.PARAMETER DirectDatabaseUrl
+URL direta do Neon fornecida como SecureString. Quando omitida, o script
+solicita a URL em um prompt mascarado.
+
 .EXAMPLE
 .\scripts\Migrate-SqliteToNeon.ps1 -ConfirmLocalServerStopped
 #>
@@ -30,7 +34,9 @@ param(
 
     [string]$PythonPath,
 
-    [string]$BackupDirectory
+    [string]$BackupDirectory,
+
+    [Security.SecureString]$DirectDatabaseUrl
 )
 
 Set-StrictMode -Version Latest
@@ -249,9 +255,14 @@ try {
             $fixturePath
         )
 
-    $secureUrl = Read-Host (
-        "Cole a URL DIRETA do Neon (sem -pooler); a entrada ficara oculta"
-    ) -AsSecureString
+    if ($null -ne $DirectDatabaseUrl) {
+        $secureUrl = $DirectDatabaseUrl
+    }
+    else {
+        $secureUrl = Read-Host (
+            "Cole a URL DIRETA do Neon (sem -pooler); a entrada ficara oculta"
+        ) -AsSecureString
+    }
     $urlPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR(
         $secureUrl
     )
