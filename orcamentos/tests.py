@@ -456,6 +456,40 @@ class OrcamentoViewsTests(TestCase):
         self.assertEqual(self.client.get("/").status_code, 200)
         self.assertEqual(self.client.get("/orcamentos/").status_code, 200)
 
+    def test_lista_exibe_acao_excluir_e_post_remove_orcamento(self):
+        orcamento = Orcamento.objects.create(
+            validade=date.today() + timedelta(days=15),
+            cliente_nome="Cliente para exclusão",
+        )
+        MaterialFornecido.objects.create(
+            orcamento=orcamento,
+            descricao="Cabo",
+            unidade="m",
+            quantidade=Decimal("10"),
+            preco_unitario=Decimal("5"),
+        )
+
+        lista = self.client.get("/orcamentos/")
+        self.assertContains(lista, "Excluir")
+        self.assertContains(lista, f"/orcamentos/{orcamento.pk}/excluir/")
+
+        resposta = self.client.post(f"/orcamentos/{orcamento.pk}/excluir/")
+        self.assertRedirects(resposta, "/orcamentos/")
+        self.assertFalse(Orcamento.objects.filter(pk=orcamento.pk).exists())
+        self.assertFalse(
+            MaterialFornecido.objects.filter(orcamento_id=orcamento.pk).exists()
+        )
+
+    def test_excluir_exige_post(self):
+        orcamento = Orcamento.objects.create(
+            validade=date.today() + timedelta(days=15),
+            cliente_nome="Cliente protegido",
+        )
+
+        resposta = self.client.get(f"/orcamentos/{orcamento.pk}/excluir/")
+        self.assertEqual(resposta.status_code, 405)
+        self.assertTrue(Orcamento.objects.filter(pk=orcamento.pk).exists())
+
     def test_numero_e_gerado_em_sequencia_e_nao_e_editavel(self):
         primeiro = Orcamento.objects.create(
             validade=date.today() + timedelta(days=15),

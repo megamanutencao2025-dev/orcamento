@@ -30,7 +30,17 @@
                     <td>{{ orcamento.validade|date:"d/m/Y" }}</td>
                     <td><span class="badge badge--{{ orcamento.status }}">{{ orcamento.get_status_display }}</span></td>
                     <td class="align-right"><strong>R$ {{ orcamento.total_final|floatformat:2 }}</strong></td>
-                    <td><div class="row-actions"><a class="table-link" href="{% url 'orcamentos:detalhe' orcamento.pk %}">Visualizar</a><a class="table-link" href="{% url 'orcamentos:editar' orcamento.pk %}">Editar</a><a class="table-link" href="{% url 'orcamentos:proposta_pdf' orcamento.pk %}" target="_blank" rel="noopener">PDF</a></div></td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="table-link" href="{% url 'orcamentos:detalhe' orcamento.pk %}">Visualizar</a>
+                            <a class="table-link" href="{% url 'orcamentos:editar' orcamento.pk %}">Editar</a>
+                            <a class="table-link" href="{% url 'orcamentos:proposta_pdf' orcamento.pk %}" target="_blank" rel="noopener">PDF</a>
+                            <form method="post" action="{% url 'orcamentos:excluir' orcamento.pk %}" data-confirm="Excluir definitivamente o orçamento {{ orcamento.numero }}?">
+                                {% csrf_token %}
+                                <button class="table-link table-link--danger" type="submit">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
             {% empty %}
                 <tr><td colspan="7"><div class="empty-state"><strong>Nenhum resultado.</strong><span>Altere os filtros ou crie um orçamento.</span></div></td></tr>
