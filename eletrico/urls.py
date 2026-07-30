@@ -1,8 +1,21 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.templatetags.static import static
 from django.urls import include, path
+from django.views.generic import RedirectView
+
+
+class FaviconRedirectView(RedirectView):
+    """Serve /favicon.ico via staticfiles (hashed path in production)."""
+
+    permanent = True
+
+    def get_redirect_url(self, *args, **kwargs):
+        return static("img/favicon.ico")
+
 
 urlpatterns = [
+    path("favicon.ico", FaviconRedirectView.as_view(), name="favicon"),
     path(
         "conta/entrar/",
         auth_views.LoginView.as_view(
